@@ -2,11 +2,19 @@ from aiogram import types
 from aiogram.dispatcher.filters.builtin import CommandStart
 from loader import dp, db, bot
 from data.config import ADMINS
+from aiogram.dispatcher import FSMContext
+from keyboards.default.client import markup_main_menu
 
 
-@dp.message_handler(CommandStart())
-async def bot_start(message: types.Message):
-    name = message.from_user.username
+@dp.message_handler(CommandStart(), state='*')
+async def bot_start(message: types.Message, state: FSMContext):
+    await db.create_table_users()
+    await state.finish()
+
+    if message.from_user.username:
+        name = f"@{message.from_user.username}"
+    else:
+        name = message.from_user.full_name
     user = await db.select_user(telegram_id=message.from_user.id)
     if user is None:
         user = await db.add_user(
@@ -16,8 +24,11 @@ async def bot_start(message: types.Message):
         )
         # informing ADMINS
         count = await db.count_users()
-        msg = f"@{user[2]} was added into db.\nWe have {count} users in db."
+        if message.from_user.username:
+            msg = f"@{user[2]} Был добавлен в БД.\nВ БД {count} пользователей."
+        else:
+            msg = f"{user[1]} Был добавлен в БД.\nВ БД {count} пользователей."
         await bot.send_message(chat_id=ADMINS[0], text=msg)
     # user = await db.select_user(telegram_id=message.from_user.id)
-    await bot.send_message(chat_id=ADMINS[0], text=f"@{name} was already in db")
-    await message.answer(f"Welcome! @{name}")
+    # await bot.send_message(chat_id=ADMINS[0], text=f"@{name} уже числится в БД")
+    await message.answer(f"Привет! {name}", reply_markup=markup_main_menu)

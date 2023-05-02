@@ -20,13 +20,13 @@ class Database:
         )
 
     async def execute(
-        self,
-        command,
-        *args,
-        fetch: bool = False,
-        fetchval: bool = False,
-        fetchrow: bool = False,
-        execute: bool = False,
+            self,
+            command,
+            *args,
+            fetch: bool = False,
+            fetchval: bool = False,
+            fetchrow: bool = False,
+            execute: bool = False,
     ):
         async with self.pool.acquire() as connection:
             connection: Connection
@@ -47,7 +47,22 @@ class Database:
         id SERIAL PRIMARY KEY,
         full_name VARCHAR(255) NOT NULL,
         username varchar(255) NULL,
-        telegram_id BIGINT NOT NULL UNIQUE
+        telegram_id BIGINT NOT NULL UNIQUE,
+        phone_number VARCHAR(20) UNIQUE,
+        booked_pc SMALLINT UNIQUE
+        );
+        """
+        await self.execute(sql, execute=True)
+
+    async def create_table_computers(self):
+        sql = """
+        CREATE TABLE IF NOT EXISTS Computers (
+        id SERIAL PRIMARY KEY,
+        price SMALLINT NOT NULL DEFAULT 6000,
+        is_booked BOOLEAN NOT NULL DEFAULT FALSE,
+        booking_time_start DATE NOT NULL,
+        booking_time_end DATE NOT NULL,
+        customer_id BIGINT NOT NULL
         );
         """
         await self.execute(sql, execute=True)
@@ -67,6 +82,14 @@ class Database:
         sql = "SELECT * FROM Users"
         return await self.execute(sql, fetch=True)
 
+    async def select_all_computers(self):
+        sql = "SELECT * FROM Computers"
+        return await self.execute(sql, fetch=True)
+
+    async def select_free_pc(self):
+        sql = "SELECT * FROM Computers WHERE is_booked = FALSE"
+        return await self.execute(sql, fetch=True)
+
     async def select_user(self, **kwargs):
         sql = "SELECT * FROM Users WHERE "
         sql, parameters = self.format_args(sql, parameters=kwargs)
@@ -80,8 +103,18 @@ class Database:
         sql = "UPDATE Users SET username=$1 WHERE telegram_id=$2"
         return await self.execute(sql, username, telegram_id, execute=True)
 
+    async def update_user_phone_number(self, phone_number, telegram_id):
+        sql = "UPDATE Users SET phone_number=$1 WHERE telegram_id=$2"
+        return await self.execute(sql, phone_number, telegram_id, execute=True)
+
     async def delete_users(self):
         await self.execute("DELETE FROM Users WHERE TRUE", execute=True)
 
+    async def clean_pc_list(self):
+        await self.execute("DELETE FROM Computers WHERE TRUE", execute=True)
+
     async def drop_users(self):
-        await self.execute("DROP TABLE Users", execute=True)
+        await self.execute("DROP TABLE IF EXISTS Users", execute=True)
+
+    async def drop_pc_list(self):
+        await self.execute("DROP TABLE Computers", execute=True)
