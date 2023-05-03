@@ -49,7 +49,8 @@ class Database:
         username varchar(255) NULL,
         telegram_id BIGINT NOT NULL UNIQUE,
         phone_number VARCHAR(20) UNIQUE,
-        booked_pc SMALLINT UNIQUE
+        booked_pc SMALLINT UNIQUE,
+        debt INTEGER DEFAULT 0
         );
         """
         await self.execute(sql, execute=True)
@@ -60,9 +61,9 @@ class Database:
         id SERIAL PRIMARY KEY,
         price SMALLINT NOT NULL DEFAULT 6000,
         is_booked BOOLEAN NOT NULL DEFAULT FALSE,
-        booking_time_start DATE NOT NULL,
-        booking_time_end DATE NOT NULL,
-        customer_id BIGINT NOT NULL
+        customer_id BIGINT NOT NULL,
+        booking_time_start DATE,
+        booking_time_end DATE
         );
         """
         await self.execute(sql, execute=True)
@@ -106,6 +107,10 @@ class Database:
     async def update_user_phone_number(self, phone_number, telegram_id):
         sql = "UPDATE Users SET phone_number=$1 WHERE telegram_id=$2"
         return await self.execute(sql, phone_number, telegram_id, execute=True)
+
+    async def update_user_debt(self, debt: int, telegram_id):
+        sql = "UPDATE Users SET debt=$1 WHERE telegram_id=$2"
+        return await self.execute(sql, debt, telegram_id, execute=True)
 
     async def delete_users(self):
         await self.execute("DELETE FROM Users WHERE TRUE", execute=True)

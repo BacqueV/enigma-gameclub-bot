@@ -5,7 +5,7 @@ from states.client import ClientState
 from aiogram.dispatcher import FSMContext
 
 
-@dp.message_handler(text='Профиль')
+@dp.message_handler(text=['Профиль', 'Посмотреть изменения'], state=(None, ClientState.user_profile))
 async def get_user_data(message: types.Message):
     await ClientState.user_profile.set()
 
@@ -16,6 +16,7 @@ async def get_user_data(message: types.Message):
     username = user['username']
     telegram_id = user['telegram_id']
     phone_number = user['phone_number']
+    debt = user['debt']
 
     msg = "<b>Ваш профиль</b>\n\n" \
           f"Полное имя: {full_name}\n" \
@@ -23,7 +24,9 @@ async def get_user_data(message: types.Message):
     if username:
         msg += f"Имя пользователя: @{username}\n"
     if phone_number:
-        msg += f"Номер телефона: {phone_number}"
+        msg += f"Номер телефона: {phone_number}\n\n"
+    if debt > 0:
+        msg += f"<b>ДОЛГ: {debt}</b>"
 
     await message.answer(msg, reply_markup=client.markup_user_profile)
 
@@ -41,7 +44,7 @@ async def change_username(message: types.Message):
 
     if new_username:
         telegram_id = message.from_user.id
-        db.update_user_username(new_username, telegram_id)
+        await db.update_user_username(new_username, telegram_id)
 
         await message.answer('Новое имя пользователя сохранено')
     else:

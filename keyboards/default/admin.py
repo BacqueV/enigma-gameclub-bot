@@ -8,8 +8,12 @@ btn_computers = KeyboardButton(text='Компьютеры')
 
 btn_user_list = KeyboardButton(text='Список пользователей')
 btn_clean_users = KeyboardButton(text='Очистить')
+btn_update_debt = KeyboardButton(text='Задолженности')
 btn_delete_users = KeyboardButton(text='Удалить')
 
+btn_refresh_debt_info = KeyboardButton(text='Просмотреть записи')
+btn_change_debt = KeyboardButton(text='Изменить запись')
+btn_delete_debt = KeyboardButton(text='Забыть долг')
 
 btn_add_pc = KeyboardButton(text='Добавить пк')
 btn_remove_pc = KeyboardButton(text='Удалить пк')
@@ -19,10 +23,15 @@ btn_remove_pc = KeyboardButton(text='Удалить пк')
 # markups
 markup_categories = ReplyKeyboardMarkup(
     resize_keyboard=True,
-    row_width=1
-).add(btn_users, btn_computers)
+    row_width=2
+).add(btn_users, btn_computers, btn_back)
 
 markup_users = ReplyKeyboardMarkup(
     resize_keyboard=True,
     row_width=2
-).row(btn_user_list).add(btn_clean_users, btn_delete_users, btn_back)
+).row(btn_user_list).row(btn_clean_users, btn_update_debt, btn_delete_users).insert(btn_back)
+
+markup_change_debt = ReplyKeyboardMarkup(
+    resize_keyboard=True,
+    row_width=2
+).row(btn_refresh_debt_info).add(btn_change_debt, btn_delete_debt).insert(btn_back)
