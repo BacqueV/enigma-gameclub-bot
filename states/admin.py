@@ -9,6 +9,7 @@ class AdminState(StatesGroup):
 
     # users
     search_for_debtors = State()
+    debt_panel = State()
     change_debt = State()
 
     # middle states

@@ -138,39 +138,63 @@ async def filter_user_info(message: types.Message, state: FSMContext):
     elif data.startswith('@'):
         user = await db.select_user(username=data[1:])
     else:
-        user = await db.select_user(telegram_id=data)
+        user = await db.select_user(telegram_id=int(data))
 
     # post filter
     try:
         name = user[1]
         username = user[2]
         debt = user[-1]
-        await AdminState.change_debt.set()
+        await AdminState.debt_panel.set()
         if username:
             await message.answer(
                 f"Долг пользователя составляет: {debt}\n\n"
                 f"Имя: {name}\n"
                 f"Юзернейм: @{username}",
-                reply_markup=admin.markup_change_debt
+                reply_markup=admin.markup_debt_panel
             )
         else:
             await message.answer(
                 f"Долг пользователя составляет: {debt}\n\n"
                 f"Имя: {name}\n",
-                reply_markup=admin.markup_change_debt
+                reply_markup=admin.markup_debt_panel
             )
+
+        # saving data into state storage
+        await state.set_data(
+            {
+                'telegram_id': user[3],
+                'name': name,
+                'username': username
+            }
+        )
     except TypeError:
         await message.reply(text='Пользователь не найден')
 
-    await state.set_data({'telegram_id': user[3]})
+
+@dp.message_handler(text='Изменить запись', user_id=ADMINS, state=AdminState.debt_panel)
+async def ask_for_debt_value(message: types.Message):
+    await AdminState.change_debt.set()
+    await message.answer(text='Введите новое значение', reply_markup=admin.markup_deny)
 
 
-@dp.message_handler(text='Изменить запись', user_id=ADMINS, state=AdminState.change_debt)
-async def change_debt(message: types.Message):
-    pass
+@dp.message_handler(user_id=ADMINS, state=AdminState.change_debt)
+async def change_debt(message: types.Message, state: FSMContext):
+    try:
+        debt = int(message.text)
+
+        data = await state.get_data()
+        telegram_id = data['telegram_id']
+
+        await db.update_user_debt(debt, telegram_id)
+        await AdminState.debt_panel.set()
+        await message.reply(text='Значение записано', reply_markup=admin.markup_debt_panel)
+    except ValueError as err:
+        print(err)
+        await message.reply(text='Введите число!')
 
 
-@dp.message_handler(text='Забыть долг', user_id=ADMINS, state=AdminState.change_debt)
+@dp.message_handler(text='Забыть долг', user_id=ADMINS, state=AdminState.debt_panel)
 async def forget_debt(message: types.Message, state: FSMContext):
     data = await state.get_data()
     telegram_id = data['telegram_id']
@@ -178,7 +202,7 @@ async def forget_debt(message: types.Message, state: FSMContext):
     await message.answer(text='Долг забыт')
 
 
-@dp.message_handler(text='Просмотреть записи', user_id=ADMINS, state=AdminState.change_debt)
+@dp.message_handler(text='Просмотреть записи', user_id=ADMINS, state=AdminState.debt_panel)
 async def refresh_debt_info(message: types.Message, state: FSMContext):
     data = await state.get_data()
     telegram_id = data['telegram_id']

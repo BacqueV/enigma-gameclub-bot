@@ -1,4 +1,4 @@
-from loader import dp
+from loader import dp, db
 from states.admin import AdminState
 from keyboards.default import admin, client
 from aiogram import types
@@ -20,8 +20,25 @@ async def close_admin_panel(message: types.Message, state: FSMContext):
 
 
 # возврат к таблице пользователей после просмотра долгов
-@dp.message_handler(text='Назад', state=AdminState.change_debt)
+@dp.message_handler(text='Назад', state=AdminState.debt_panel)
 async def go_to_users(message: types.Message, state: FSMContext):
     await state.finish()
     await AdminState.users.set()
     await message.answer(text='Таблица пользователей', reply_markup=admin.markup_users)
+
+
+# отказ от изменения значения долга
+@dp.message_handler(text='Назад', state=AdminState.change_debt)
+async def go_to_debt_panel(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    name = data['name']
+    username = data['username']
+    telegram_id = data['telegram_id']
+
+    debt = await db.select_user(telegram_id=telegram_id)[-1]
+
+    await AdminState.debt_panel.set()
+    await message.answer(text=f'Долг пользователя составляет: {debt}\n\n'
+                              f'Имя: {name}\n'
+                              f'Юзернейм: @{username}',
+                         reply_markup=admin.markup_debt_panel)

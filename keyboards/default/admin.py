@@ -31,7 +31,9 @@ markup_users = ReplyKeyboardMarkup(
     row_width=2
 ).row(btn_user_list).row(btn_clean_users, btn_update_debt, btn_delete_users).insert(btn_back)
 
-markup_change_debt = ReplyKeyboardMarkup(
+markup_debt_panel = ReplyKeyboardMarkup(
     resize_keyboard=True,
     row_width=2
 ).row(btn_refresh_debt_info).add(btn_change_debt, btn_delete_debt).insert(btn_back)
+
+markup_deny = ReplyKeyboardMarkup(resize_keyboard=True).row(btn_back)
