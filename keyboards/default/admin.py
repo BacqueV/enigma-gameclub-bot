@@ -3,6 +3,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 # buttons
 btn_back = KeyboardButton(text='Назад')
 
+btn_advert = KeyboardButton(text='Реклама')
 btn_users = KeyboardButton(text='Пользователи')
 btn_computers = KeyboardButton(text='Компьютеры')
 
@@ -24,7 +25,7 @@ btn_remove_pc = KeyboardButton(text='Удалить пк')
 markup_categories = ReplyKeyboardMarkup(
     resize_keyboard=True,
     row_width=2
-).add(btn_users, btn_computers, btn_back)
+).row(btn_advert).add(btn_users, btn_computers, btn_back)
 
 markup_users = ReplyKeyboardMarkup(
     resize_keyboard=True,

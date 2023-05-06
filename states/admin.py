@@ -12,5 +12,7 @@ class AdminState(StatesGroup):
     debt_panel = State()
     change_debt = State()
 
+    get_ad_msg = State()
+
     # middle states
     choice = State()

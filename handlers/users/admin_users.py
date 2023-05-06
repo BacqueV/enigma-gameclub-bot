@@ -23,7 +23,8 @@ async def open_panel(message: types.Message, state: FSMContext):
 @dp.message_handler(text='Пользователи', state=AdminState.categories)
 async def open_users(message: types.Message):
     await AdminState.users.set()
-    await message.answer(text='Начата работа с таблицей пользователей', reply_markup=admin.markup_users)
+    await message.answer(text='Начата работа с таблицей пользователей',
+                         reply_markup=admin.markup_users)
 
 
 @dp.message_handler(
@@ -81,7 +82,8 @@ async def dropusers(message: types.Message):
     btn_no = KeyboardButton(text='Нет')
     markup_choice = ReplyKeyboardMarkup(resize_keyboard=True, row_width=1).add(btn_no, btn_yes)
 
-    await message.reply(text='Подтверждаете удаление таблицы пользователей?', reply_markup=markup_choice)
+    await message.reply(text='Подтверждаете удаление таблицы пользователей?',
+                        reply_markup=markup_choice)
 
 
 @dp.message_handler(
@@ -92,7 +94,8 @@ async def dropusers(message: types.Message):
 async def delete_table_users(message: types.Message):
     if message.text == 'Да':
         await db.drop_users()
-        await message.answer(text='Такой таблицы больше не существует', reply_markup=admin.markup_users)
+        await message.answer(text='Такой таблицы больше не существует',
+                             reply_markup=admin.markup_users)
     else:
         await message.answer(text='Откат', reply_markup=admin.markup_users)
     await AdminState.users.set()
@@ -114,11 +117,13 @@ async def search_for_debtors(message: types.Message):
     )
 
 
-@dp.message_handler(text='В каком формате высылать данные?', user_id=ADMINS, state=AdminState.search_for_debtors)
+@dp.message_handler(text='В каком формате высылать данные?', user_id=ADMINS,
+                    state=AdminState.search_for_debtors)
 async def explain_info_form(message: types.Message):
     msg = "Номер телефона начинается со знака + и пишется без пробелов.\n\n" \
           "Имя пользователя (юзернейм) отправлять начиная знаком @\n\n" \
-          "Телеграм ID цифрами, как есть. Просто перешлите сообщение от нужного человека в этого бота - @getmyid_bot" \
+          "Телеграм ID цифрами, как есть. " \
+          "Просто перешлите сообщение от нужного человека в этого бота - @getmyid_bot" \
           " и выберите поле Forwarded from"
     await message.answer(msg)
 
@@ -126,7 +131,8 @@ async def explain_info_form(message: types.Message):
 @dp.message_handler(text='Отмена', user_id=ADMINS, state=AdminState.search_for_debtors)
 async def stop_searching(message: types.Message):
     await AdminState.users.set()
-    await message.answer(text='Эх, щас бы накидали долгов по 10, 15к...', reply_markup=admin.markup_users)
+    await message.answer(text='Эх, щас бы накидали долгов по 10, 15к...',
+                         reply_markup=admin.markup_users)
 
 
 @dp.message_handler(user_id=ADMINS, state=AdminState.search_for_debtors)
@@ -211,17 +217,3 @@ async def refresh_debt_info(message: types.Message, state: FSMContext):
     await message.answer(
         text=f"Долг пользователя составляет: {debt}"
     )
-
-
-# надо дописать, сделать функцию более комплексной
-@dp.message_handler(
-    text=["/advert", "Реклама"],
-    user_id=ADMINS,
-    state=AdminState.users
-)
-async def send_ad_to_all(message: types.Message):
-    users = await db.select_all_users()
-    for user in users:
-        user_id = user[3]
-        await bot.send_message(chat_id=user_id, text="@aiogram - join us!")
-        await asyncio.sleep(0.05)

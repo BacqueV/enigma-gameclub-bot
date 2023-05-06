@@ -6,7 +6,7 @@ from aiogram.dispatcher import FSMContext
 
 
 # прекратить работу с конкретной таблицей из БД и вернуться к их выбору
-@dp.message_handler(text='Назад', state=AdminState.users)
+@dp.message_handler(text='Назад', state=(AdminState.users, AdminState.get_ad_msg))
 async def go_to_categories(message: types.Message):
     await AdminState.categories.set()
     await message.answer(text='Выберите таблицу с которой будете работать', reply_markup=admin.markup_categories)
@@ -42,3 +42,4 @@ async def go_to_debt_panel(message: types.Message, state: FSMContext):
                               f'Имя: {name}\n'
                               f'Юзернейм: @{username}',
                          reply_markup=admin.markup_debt_panel)
+
