@@ -13,6 +13,9 @@ class AdminState(StatesGroup):
     change_debt = State()
 
     get_ad_msg = State()
+    users_choice = State()
 
-    # middle states
-    choice = State()
+    # computers
+    pc_choice = State()
+    add_pc = State()
+    delete_pc = State()

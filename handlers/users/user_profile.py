@@ -12,11 +12,12 @@ async def get_user_data(message: types.Message):
     user_id = message.from_user.id
     user = await db.select_user(telegram_id=user_id)
 
-    full_name = user['full_name']
-    username = user['username']
-    telegram_id = user['telegram_id']
-    phone_number = user['phone_number']
-    debt = user['debt']
+    full_name = user.get('full_name')
+    telegram_id = user.get('telegram_id')
+    debt = user.get('debt')
+    username = user.get('username')
+    phone_number = user.get('phone_number')
+
 
     msg = "<b>Ваш профиль</b>\n\n" \
           f"Полное имя: {full_name}\n" \

@@ -1,14 +1,16 @@
-import asyncio
 from aiogram import types
+import asyncpg.exceptions
 from data.config import ADMINS
 from loader import dp, db, bot
 import pandas as pd
+import logging
 from states.admin import AdminState
 from keyboards.default import admin
 from aiogram.dispatcher import FSMContext
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
+# entry to admin panel
 @dp.message_handler(text='/admin', user_id=ADMINS, state='*')
 async def open_panel(message: types.Message, state: FSMContext):
     await state.finish()
@@ -23,15 +25,13 @@ async def open_panel(message: types.Message, state: FSMContext):
 @dp.message_handler(text='Пользователи', state=AdminState.categories)
 async def open_users(message: types.Message):
     await AdminState.users.set()
-    await message.answer(text='Начата работа с таблицей пользователей',
-                         reply_markup=admin.markup_users)
+    await message.answer(
+        text='Начата работа с таблицей пользователей',
+        reply_markup=admin.markup_users
+    )
 
 
-@dp.message_handler(
-    text=["/allusers", "Список пользователей"],
-    user_id=ADMINS,
-    state=AdminState.users
-)
+@dp.message_handler(text=["/allusers", "Список пользователей"], state=AdminState.users)
 async def get_all_users(message: types.Message):
     try:
         users = await db.select_all_users()
@@ -51,57 +51,57 @@ async def get_all_users(message: types.Message):
                 await bot.send_message(message.chat.id, df[x:x + 50])
         else:
             await bot.send_message(message.chat.id, df)
-    except Exception:
-        await message.answer('Ошибка, возможно вы еще не создали эту таблицу\n'
-                             'Чтобы это сделать, введите /start')
+    except asyncpg.exceptions.UndefinedTableError as err:
+        await message.answer(
+            'Ошибка, возможно вы еще не создали эту таблицу\n'
+            'Чтобы это сделать, введите /start'
+        )
+        logging.exception(err)
 
 
-@dp.message_handler(
-    text=["/cleanusers", "Очистить"],
-    user_id=ADMINS,
-    state=AdminState.users
-)
+@dp.message_handler(text=["/cleanusers", "Очистить"], state=AdminState.users)
 async def cleanusers(message: types.Message):
     try:
         await db.delete_users()
         await message.answer("Таблица пуста!")
-    except Exception:
-        await message.answer('Ошибка, возможно вы еще не создали эту таблицу\n'
-                             'Чтобы это сделать, введите /start')
+    except asyncpg.exceptions.UndefinedTableError as err:
+        await message.answer(
+            'Ошибка, возможно вы еще не создали эту таблицу\n'
+            'Чтобы это сделать, введите /start'
+        )
+        logging.exception(err)
 
 
-@dp.message_handler(
-    text=['/dropusers', 'Удалить'],
-    user_id=ADMINS,
-    state=AdminState.users
-)
+@dp.message_handler(text=['/dropusers', 'Удалить'], state=AdminState.users)
 async def dropusers(message: types.Message):
-    await AdminState.choice.set()
+    await AdminState.users_choice.set()
 
     btn_yes = KeyboardButton(text='Да')
     btn_no = KeyboardButton(text='Нет')
-    markup_choice = ReplyKeyboardMarkup(resize_keyboard=True, row_width=1).add(btn_no, btn_yes)
+    markup_choice = ReplyKeyboardMarkup(
+        resize_keyboard=True, row_width=1
+    ).add(btn_no, btn_yes)
 
-    await message.reply(text='Подтверждаете удаление таблицы пользователей?',
-                        reply_markup=markup_choice)
+    await message.reply(
+        text='Подтверждаете удаление таблицы пользователей?',
+        reply_markup=markup_choice
+    )
 
 
-@dp.message_handler(
-    text=['Да', 'Нет'],
-    user_id=ADMINS,
-    state=AdminState.choice
-)
+@dp.message_handler(text=['Да', 'Нет'], state=AdminState.users_choice)
 async def delete_table_users(message: types.Message):
     if message.text == 'Да':
         await db.drop_users()
-        await message.answer(text='Такой таблицы больше не существует',
-                             reply_markup=admin.markup_users)
+        await message.answer(
+            text='Такой таблицы больше не существует',
+            reply_markup=admin.markup_users
+        )
     else:
         await message.answer(text='Откат', reply_markup=admin.markup_users)
     await AdminState.users.set()
 
 
-@dp.message_handler(text='Задолженности', user_id=ADMINS, state=AdminState.users)
+@dp.message_handler(text='Задолженности', state=AdminState.users)
 async def search_for_debtors(message: types.Message):
     await AdminState.search_for_debtors.set()
 
@@ -117,22 +117,23 @@ async def search_for_debtors(message: types.Message):
     )
 
 
-@dp.message_handler(text='В каком формате высылать данные?', user_id=ADMINS,
-                    state=AdminState.search_for_debtors)
+@dp.message_handler(text='В каком формате высылать данные?', state=AdminState.search_for_debtors)
 async def explain_info_form(message: types.Message):
     msg = "Номер телефона начинается со знака + и пишется без пробелов.\n\n" \
           "Имя пользователя (юзернейм) отправлять начиная знаком @\n\n" \
           "Телеграм ID цифрами, как есть. " \
           "Просто перешлите сообщение от нужного человека в этого бота - @getmyid_bot" \
-          " и выберите поле Forwarded from"
+          " и выберите поле id в графе Forwarded from"
     await message.answer(msg)
 
 
-@dp.message_handler(text='Отмена', user_id=ADMINS, state=AdminState.search_for_debtors)
+@dp.message_handler(text='Отмена', state=AdminState.search_for_debtors)
 async def stop_searching(message: types.Message):
     await AdminState.users.set()
-    await message.answer(text='Эх, щас бы накидали долгов по 10, 15к...',
-                         reply_markup=admin.markup_users)
+    await message.answer(
+        text='Эх, щас бы накидали долгов по 10, 15к...',
+        reply_markup=admin.markup_users
+    )
 
 
 @dp.message_handler(user_id=ADMINS, state=AdminState.search_for_debtors)
@@ -174,14 +175,18 @@ async def filter_user_info(message: types.Message, state: FSMContext):
                 'username': username
             }
         )
-    except TypeError:
+    except TypeError as err:
         await message.reply(text='Пользователь не найден')
+        logging.exception(err)
 
 
-@dp.message_handler(text='Изменить запись', user_id=ADMINS, state=AdminState.debt_panel)
+@dp.message_handler(text='Изменить запись', state=AdminState.debt_panel)
 async def ask_for_debt_value(message: types.Message):
     await AdminState.change_debt.set()
-    await message.answer(text='Введите новое значение', reply_markup=admin.markup_deny)
+    await message.answer(
+        text='Введите новое значение',
+        reply_markup=admin.markup_deny
+    )
 
 
 @dp.message_handler(user_id=ADMINS, state=AdminState.change_debt)
@@ -194,13 +199,15 @@ async def change_debt(message: types.Message, state: FSMContext):
 
         await db.update_user_debt(debt, telegram_id)
         await AdminState.debt_panel.set()
-        await message.reply(text='Значение записано', reply_markup=admin.markup_debt_panel)
+        await message.reply(
+            text='Значение записано', reply_markup=admin.markup_debt_panel
+        )
     except ValueError as err:
-        print(err)
-        await message.reply(text='Введите число!')
+        await message.reply('Введите число!')
+        logging.exception(err)
 
 
-@dp.message_handler(text='Забыть долг', user_id=ADMINS, state=AdminState.debt_panel)
+@dp.message_handler(text='Забыть долг', state=AdminState.debt_panel)
 async def forget_debt(message: types.Message, state: FSMContext):
     data = await state.get_data()
     telegram_id = data['telegram_id']
@@ -208,7 +215,7 @@ async def forget_debt(message: types.Message, state: FSMContext):
     await message.answer(text='Долг забыт')
 
 
-@dp.message_handler(text='Просмотреть записи', user_id=ADMINS, state=AdminState.debt_panel)
+@dp.message_handler(text='Просмотреть записи', state=AdminState.debt_panel)
 async def refresh_debt_info(message: types.Message, state: FSMContext):
     data = await state.get_data()
     telegram_id = data['telegram_id']

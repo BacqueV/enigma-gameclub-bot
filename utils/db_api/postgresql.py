@@ -60,8 +60,9 @@ class Database:
         CREATE TABLE IF NOT EXISTS Computers (
         id SERIAL PRIMARY KEY,
         price SMALLINT NOT NULL DEFAULT 6000,
+        available BOOLEAN DEFAULT TRUE,
         is_booked BOOLEAN NOT NULL DEFAULT FALSE,
-        customer_id BIGINT NOT NULL,
+        customer_id BIGINT,
         booking_time_start DATE,
         booking_time_end DATE
         );
@@ -76,8 +77,12 @@ class Database:
         return sql, tuple(parameters.values())
 
     async def add_user(self, full_name, username, telegram_id):
-        sql = "INSERT INTO users (full_name, username, telegram_id) VALUES($1, $2, $3) returning *"
+        sql = "INSERT INTO Users (full_name, username, telegram_id) VALUES($1, $2, $3) returning *"
         return await self.execute(sql, full_name, username, telegram_id, fetchrow=True)
+
+    async def add_pc(self, price):
+        sql = "INSERT INTO Computers (price) VALUES ($1) returning *"
+        return await self.execute(sql, price, fetchrow=True)
 
     async def select_all_users(self):
         sql = "SELECT * FROM Users"
@@ -100,6 +105,10 @@ class Database:
         sql = "SELECT COUNT(*) FROM Users"
         return await self.execute(sql, fetchval=True)
 
+    async def remove_pc(self, pc_id):
+        sql = "DELETE FROM Computers WHERE id = $1 returning *"
+        return await self.execute(sql, pc_id, execute=True)
+
     async def update_user_username(self, username, telegram_id):
         sql = "UPDATE Users SET username=$1 WHERE telegram_id=$2"
         return await self.execute(sql, username, telegram_id, execute=True)
@@ -121,5 +130,5 @@ class Database:
     async def drop_users(self):
         await self.execute("DROP TABLE IF EXISTS Users", execute=True)
 
-    async def drop_pc_list(self):
-        await self.execute("DROP TABLE Computers", execute=True)
+    async def drop_computers(self):
+        await self.execute("DROP TABLE IF EXISTS  Computers", execute=True)

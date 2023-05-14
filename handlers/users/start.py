@@ -9,6 +9,7 @@ from keyboards.default.client import markup_main_menu
 @dp.message_handler(CommandStart(), state='*')
 async def bot_start(message: types.Message, state: FSMContext):
     await db.create_table_users()
+    await db.create_table_computers()
     await state.finish()
 
     if message.from_user.username:

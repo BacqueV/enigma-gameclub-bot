@@ -6,13 +6,13 @@ from aiogram.dispatcher import FSMContext
 
 
 # прекратить работу с конкретной таблицей из БД и вернуться к их выбору
-@dp.message_handler(text='Назад', state=(AdminState.users, AdminState.get_ad_msg))
+@dp.message_handler(text='Назад', state=(AdminState.users, AdminState.get_ad_msg, AdminState.computers))
 async def go_to_categories(message: types.Message):
     await AdminState.categories.set()
     await message.answer(text='Выберите таблицу с которой будете работать', reply_markup=admin.markup_categories)
 
 
-# возврат из админ панели
+# выход из админ панели
 @dp.message_handler(text='Назад', state=AdminState.categories)
 async def close_admin_panel(message: types.Message, state: FSMContext):
     await state.finish()
@@ -43,3 +43,8 @@ async def go_to_debt_panel(message: types.Message, state: FSMContext):
                               f'Юзернейм: @{username}',
                          reply_markup=admin.markup_debt_panel)
 
+
+@dp.message_handler(text='Назад', state=AdminState.add_pc)
+async def stop_adding_pc(message: types.Message):
+    await AdminState.computers.set()
+    await message.answer(text='Таблица компьютеров', reply_markup=admin.markup_computers)

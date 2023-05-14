@@ -3,6 +3,7 @@ from . import help
 from . import start
 from . import admin_users
 from . import admin_advert
+from . import admin_computers
 from . import pc_info
 from . import user_profile
 from . import echo
