@@ -18,7 +18,6 @@ async def get_user_data(message: types.Message):
     username = user.get('username')
     phone_number = user.get('phone_number')
 
-
     msg = "<b>Ваш профиль</b>\n\n" \
           f"Полное имя: {full_name}\n" \
           f"Телеграм ID: {telegram_id}\n"

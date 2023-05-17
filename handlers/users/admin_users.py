@@ -103,6 +103,7 @@ async def delete_table_users(message: types.Message):
 
 @dp.message_handler(text='Задолженности', state=AdminState.users)
 async def search_for_debtors(message: types.Message):
+    debtors_list = await db.select_debtors()
     await AdminState.search_for_debtors.set()
 
     btn_help = KeyboardButton(text='В каком формате высылать данные?')
@@ -111,10 +112,39 @@ async def search_for_debtors(message: types.Message):
         btn_help, btn_deny
     )
 
-    await message.answer(
-        text='Отправьте мне телеграм id, имя пользователя или номер телефона.',
-        reply_markup=markup_deny
-    )
+    if debtors_list:
+        name = []
+        telegram_id = []
+        phone_number = []
+        debt = []
+
+        for debtor in debtors_list:
+            name.append(debtor[1])
+            phone_number.append(debtor[4])
+            telegram_id.append(debtor[3])
+            debt.append(debtor[-1])
+        data = {
+            "Долг": debt,
+            "Номер телефона": phone_number,
+            "Телеграм ID": telegram_id,
+            "Имя": name
+        }
+        pd.options.display.max_rows = 10000
+        df = pd.DataFrame(data)
+        if len(df) > 50:
+            for x in range(0, len(df), 50):
+                await bot.send_message(message.chat.id, df[x:x + 50])
+        else:
+            await message.answer(
+                text=str(df),
+                reply_markup=markup_deny
+            )
+    else:
+        await message.answer(
+            "Отправьте мне телеграм id, имя пользователя или номер" 
+            "телефона чтобы найти должника.",
+            reply_markup=markup_deny
+        )
 
 
 @dp.message_handler(text='В каком формате высылать данные?', state=AdminState.search_for_debtors)
@@ -140,6 +170,7 @@ async def stop_searching(message: types.Message):
 async def filter_user_info(message: types.Message, state: FSMContext):
     data = str(message.text)
 
+    # filter user info
     if data.startswith('+'):
         user = await db.select_user(phone_number=data)
     elif data.startswith('@'):
@@ -175,9 +206,8 @@ async def filter_user_info(message: types.Message, state: FSMContext):
                 'username': username
             }
         )
-    except TypeError as err:
+    except TypeError:
         await message.reply(text='Пользователь не найден')
-        logging.exception(err)
 
 
 @dp.message_handler(text='Изменить запись', state=AdminState.debt_panel)

@@ -1,11 +1,11 @@
 import asyncpg.exceptions
 from aiogram import types
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 import logging
 from loader import dp, db
 from states.admin import AdminState
 from keyboards.default import admin
-from aiogram.dispatcher import FSMContext
 
 
 @dp.message_handler(text='Компьютеры', state=AdminState.categories)
@@ -15,15 +15,20 @@ async def open_computers(message: types.Message):
 
 
 @dp.message_handler(text='Список компьютеров', state=AdminState.computers)
-async def get_pc_list(message: types.Message, state: FSMContext):
+async def get_pc_list(message: types.Message):
     try:
-        pc_list = await db.select_all_computers()
-        pc_data = list()
+        pc_count = await db.count_computers()
 
-        for pc in pc_list:
-            pc_data.append({pc[0]: (pc[1], pc[2], pc[3], pc[4], pc[5], pc[6])})
-        await state.set_data({'pc_data': pc_data})
-        await message.answer(str(pc_data))
+        pc_list = InlineKeyboardMarkup(row_width=5)
+        btn_prev = InlineKeyboardButton(text='◀️', callback_data='prev')
+        btn_next = InlineKeyboardButton(text='▶️', callback_data='next')
+        btn_clean = InlineKeyboardButton(text='🧹', callback_data='clean')
+        btn_accept = InlineKeyboardButton(text='👌', callback_data='accept')
+
+        for pc in range(pc_count):
+            pc_list.insert(InlineKeyboardButton(text=str(pc + 1), callback_data=str(pc)))
+
+        await message.answer(text='Список пк', reply_markup=pc_list)
     except asyncpg.exceptions.UndefinedTableError as err:
         await message.answer(
             'Ошибка, возможно вы еще не создали эту таблицу\n'

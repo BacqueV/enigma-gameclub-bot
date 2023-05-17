@@ -93,7 +93,7 @@ class Database:
         return await self.execute(sql, fetch=True)
 
     async def select_free_pc(self):
-        sql = "SELECT * FROM Computers WHERE is_booked = FALSE"
+        sql = "SELECT * FROM Computers WHERE is_booked = FALSE AND available = TRUE"
         return await self.execute(sql, fetch=True)
 
     async def select_user(self, **kwargs):
@@ -101,8 +101,16 @@ class Database:
         sql, parameters = self.format_args(sql, parameters=kwargs)
         return await self.execute(sql, *parameters, fetchrow=True)
 
+    async def select_debtors(self):
+        sql = "SELECT * FROM Users WHERE debt != 0"
+        return await self.execute(sql, fetch=True)
+
     async def count_users(self):
         sql = "SELECT COUNT(*) FROM Users"
+        return await self.execute(sql, fetchval=True)
+
+    async def count_computers(self):
+        sql = "SELECT COUNT(*) FROM Computers"
         return await self.execute(sql, fetchval=True)
 
     async def remove_pc(self, pc_id):
