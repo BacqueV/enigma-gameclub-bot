@@ -101,21 +101,21 @@ class Database:
         sql, parameters = self.format_args(sql, parameters=kwargs)
         return await self.execute(sql, *parameters, fetchrow=True)
 
+    async def select_pc(self, pc_id):
+        sql = "SELECT * FROM Computers WHERE id = $1"
+        return await self.execute(sql, pc_id, fetchrow=True)
+
     async def select_debtors(self):
         sql = "SELECT * FROM Users WHERE debt != 0"
+        return await self.execute(sql, fetch=True)
+
+    async def select_computers(self):
+        sql = "SELECT id FROM Computers"
         return await self.execute(sql, fetch=True)
 
     async def count_users(self):
         sql = "SELECT COUNT(*) FROM Users"
         return await self.execute(sql, fetchval=True)
-
-    async def count_computers(self):
-        sql = "SELECT COUNT(*) FROM Computers"
-        return await self.execute(sql, fetchval=True)
-
-    async def remove_pc(self, pc_id):
-        sql = "DELETE FROM Computers WHERE id = $1 returning *"
-        return await self.execute(sql, pc_id, execute=True)
 
     async def update_user_username(self, username, telegram_id):
         sql = "UPDATE Users SET username=$1 WHERE telegram_id=$2"
@@ -128,6 +128,14 @@ class Database:
     async def update_user_debt(self, debt: int, telegram_id):
         sql = "UPDATE Users SET debt=$1 WHERE telegram_id=$2"
         return await self.execute(sql, debt, telegram_id, execute=True)
+
+    async def update_pc_price(self, new_price, pc_id):
+        sql = "UPDATE Computers SET price=$1 WHERE id = $2"
+        return await self.execute(sql, new_price, pc_id, execute=True)
+
+    async def update_pc_availability(self, pc_id):
+        sql = "UPDATE Computers SET available = NOT available WHERE id = $1"
+        return await self.execute(sql, pc_id, execute=True)
 
     async def delete_users(self):
         await self.execute("DELETE FROM Users WHERE TRUE", execute=True)

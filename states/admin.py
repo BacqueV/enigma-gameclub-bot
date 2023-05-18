@@ -18,4 +18,4 @@ class AdminState(StatesGroup):
     # computers
     pc_choice = State()
     add_pc = State()
-    delete_pc = State()
+    pc_menu = State()
