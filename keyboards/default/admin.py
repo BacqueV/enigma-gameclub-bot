@@ -20,16 +20,6 @@ btn_delete_debt = KeyboardButton(text='Забыть долг')
 btn_add_pc = KeyboardButton(text='Добавить пк')
 btn_remove_pc = KeyboardButton(text='Удалить пк')
 
-# inline buttons
-ibtn_change_price = InlineKeyboardButton(
-    text='Изменить цену', callback_data='change_price'
-)
-ibtn_change_availability = InlineKeyboardButton(
-    text='Изменить доступность', callback_data='change_availability'
-)
-ibtn_back = InlineKeyboardButton(
-    text='Назад', callback_data='back'
-)
 
 # markups
 markup_categories = ReplyKeyboardMarkup(
@@ -54,15 +44,4 @@ deny_default = ReplyKeyboardMarkup(resize_keyboard=True, row_width=1).add(btn_ba
 markup_computers = ReplyKeyboardMarkup(
     resize_keyboard=True,
     row_width=2
-).add(btn_pc_list, btn_add_pc).add(btn_clean, btn_delete, btn_back)
-
-imarkup_pc_menu = InlineKeyboardMarkup(row_width=2).add(
-    ibtn_change_price, ibtn_change_availability,
-    ibtn_back
-)
-
-imarkup_gap = InlineKeyboardMarkup().add(InlineKeyboardButton(text='...', callback_data='...'))
-
-imarkup_deny = InlineKeyboardMarkup().add(
-    InlineKeyboardButton(text='Отмена', callback_data='deny')
-)
+).add(btn_pc_list).add(btn_add_pc, btn_remove_pc).add(btn_clean, btn_delete, btn_back)

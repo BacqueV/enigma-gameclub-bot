@@ -1,12 +1,16 @@
 import aiogram.utils.exceptions
+from typing import Union
 import asyncpg.exceptions
 from aiogram import types
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+
+import handlers.users.go_back
 from loader import dp, db
 from states.admin import AdminState
 from keyboards.default import admin
+from keyboards.inline import admin as iadmin
 from aiogram.dispatcher import FSMContext
+from handlers.users.admin import spec_functions
 
 
 @dp.message_handler(text='Компьютеры', state=AdminState.categories)
@@ -16,28 +20,54 @@ async def open_computers(message: types.Message):
 
 
 @dp.message_handler(text='Список компьютеров', state=AdminState.computers)
-async def get_pc_list(message: types.Message):
+async def get_pc_list(message: Union[types.Message | types.CallbackQuery], state: FSMContext):
     try:
-        pc_list = await db.select_computers()
-
-        markup_pc_list = InlineKeyboardMarkup(row_width=5)
-        btn_prev = InlineKeyboardButton(text='◀️', callback_data='prev')
-        btn_next = InlineKeyboardButton(text='▶️', callback_data='next')
-
-        for pc in pc_list:
-            markup_pc_list.insert(InlineKeyboardButton(text=pc[0], callback_data=pc[0]))
-        markup_pc_list.add(btn_prev, btn_next).row(admin.ibtn_back)
-
-        await message.answer(text='Переключение клавиатуры...', reply_markup=ReplyKeyboardRemove())
+        pc_info = await spec_functions.get_pc_list()
+        await message.answer(
+            text='Переключение клавиатуры...', reply_markup=ReplyKeyboardRemove()
+        )
         await message.answer(
             text='Нажмите на один из списка чтобы перейти к его настройке',
-            reply_markup=markup_pc_list
+            reply_markup=pc_info
         )
+        await state.set_data({'page': 0})
     except asyncpg.exceptions.UndefinedTableError:
         await message.answer(
             'Ошибка, возможно вы еще не создали эту таблицу\n'
             'Чтобы это сделать, введите /start'
         )
+
+
+@dp.callback_query_handler(text='prev', state=AdminState.computers)
+async def get_prev_page(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    page = data['page']
+
+    new_page = await spec_functions.get_pc_list(page - 1)
+    if isinstance(new_page, str):
+        await call.answer(new_page)
+    else:
+        await call.message.edit_text(
+            text=f"Страница №{page}",
+            reply_markup=new_page
+        )
+        await state.update_data({'page': page - 1})
+
+
+@dp.callback_query_handler(text='next', state=AdminState.computers)
+async def get_prev_page(call: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    page = data['page']
+
+    new_page = await spec_functions.get_pc_list(page + 1)
+    if isinstance(new_page, str):
+        await call.answer(new_page)
+    else:
+        await call.message.edit_text(
+            text=f"Страница №{page + 2}",
+            reply_markup=new_page
+        )
+        await state.update_data({'page': page + 1})
 
 
 @dp.message_handler(text='Очистить', state=AdminState.computers)
@@ -115,90 +145,80 @@ async def add_pc(message: types.Message):
         await message.answer('Введите значение верно!')
 
 
+@dp.message_handler(text='Удалить пк', state=AdminState.computers)
+async def ask_for_pc_id(message: types.Message):
+    await AdminState.del_pc.set()
+    await message.answer(
+        text='Введите id компьютера, чтобы удалить его и все данные о нем.',
+        reply_markup=admin.markup_deny
+    )
+
+
+@dp.message_handler(state=AdminState.del_pc)
+async def delete_pc(message: types.Message):
+    try:
+        pc_id = int(message.text)
+        await db.delete_pc(pc_id)
+        await message.reply(
+            text='ПК был удален',
+            reply_markup=admin.markup_computers
+        )
+        await AdminState.computers.set()
+    except Exception as err:
+        if isinstance(err, ValueError):
+            await message.answer('Введите число!')
+        else:
+            await message.answer("Ошибка. Возможно этого пк не существует\n\n"
+                                 f"{err}")
+
+
 @dp.callback_query_handler(state=AdminState.computers)
 async def open_pc_menu(call: types.CallbackQuery, state: FSMContext):
     try:
         pc_id = int(call.data)
-
-        await AdminState.pc_menu.set()
-        pc = await db.select_pc(pc_id)
-
-        price = pc[1]
-        available = pc[2]
-        is_booked = pc[3]
-        customer_id = pc[4]
-        booking_time_start = pc[5]
-        booking_time_end = pc[6]
-
-        msg = f"ПК №{pc_id}\n\n" \
-              f"Цена: {price}\n" \
-              f"Доступность: {available}\n"
-
-        if is_booked:
-            msg += f"Бронь: {available}\n" \
-                   f"Клиент: {customer_id}\n" \
-                   f"Начало бронирования: {booking_time_start}\n" \
-                   f"Конец: {booking_time_end}"
-        else:
-            msg += "\n<i>Пк не забронирован</i>"
-
+        msg = await spec_functions.get_pc_info(pc_id)
         await call.message.edit_text(
             text=msg,
-            reply_markup=admin.imarkup_pc_menu
+            reply_markup=iadmin.markup_pc_menu
         )
-        await state.set_data({"pc_id": pc_id})
-    except ValueError:
-        await call.answer('Не надо сюда нажимать!')
+        await state.update_data({'pc_id': pc_id})
+        await AdminState.pc_menu.set()
+    except (ValueError, TypeError):
+        try:
+            await handlers.users.go_back.exit_pc_menu(call, state)
+        except aiogram.utils.exceptions.MessageNotModified:
+            await call.answer('Не надо сюда нажимать')
 
 
 @dp.callback_query_handler(text='change_price', state=AdminState.pc_menu)
 async def ask_for_new_price(call: types.CallbackQuery):
     await call.message.edit_text(
-        text='Введите новое значение', reply_markup=admin.imarkup_deny
+        text='Введите новое значение', reply_markup=iadmin.markup_deny
     )
 
 
 @dp.message_handler(state=AdminState.pc_menu)
 async def change_price(message: types.Message, state: FSMContext):
     try:
-        new_price = int(message.text)
         data = await state.get_data('pc_id')
+        new_price = int(message.text)
         pc_id = data['pc_id']
         await db.update_pc_price(new_price, pc_id)
 
-        pc = await db.select_pc(pc_id)
-        price = pc[1]
-        available = pc[2]
-        is_booked = pc[3]
-        customer_id = pc[4]
-        booking_time_start = pc[5]
-        booking_time_end = pc[6]
-
-        msg = f"ПК №{pc_id}\n\n" \
-              f"Цена: {price}\n" \
-              f"Доступность: {available}\n"
-
-        if is_booked:
-            msg += f"Бронь: {available}\n" \
-                   f"Клиент: {customer_id}\n" \
-                   f"Начало бронирования: {booking_time_start}\n" \
-                   f"Конец: {booking_time_end}"
-        else:
-            msg += "\n<i>Пк не забронирован</i>"
+        msg = await spec_functions.get_pc_info(pc_id)
 
         try:
             await message.edit_text(
                 text=msg,
-                reply_markup=admin.imarkup_pc_menu
+                reply_markup=iadmin.markup_pc_menu
             )
         except aiogram.utils.exceptions.MessageCantBeEdited:
             await message.answer(
                 text=msg,
-                reply_markup=admin.imarkup_pc_menu
+                reply_markup=iadmin.markup_pc_menu
             )
-        await state.set_data({"pc_id": pc_id})
     except ValueError:
-        await message.answer('Введите число!')
+        await message.reply('Введите число!')
 
 
 @dp.callback_query_handler(text='change_availability', state=AdminState.pc_menu)
@@ -207,29 +227,10 @@ async def change_availability(call: types.CallbackQuery, state: FSMContext):
     pc_id = data['pc_id']
     await db.update_pc_availability(pc_id)
 
-    pc = await db.select_pc(pc_id)
-    price = pc[1]
-    available = pc[2]
-    is_booked = pc[3]
-    customer_id = pc[4]
-    booking_time_start = pc[5]
-    booking_time_end = pc[6]
-
-    msg = f"ПК №{pc_id}\n\n" \
-          f"Цена: {price}\n" \
-          f"Доступность: {available}\n"
-
-    if is_booked:
-        msg += f"Бронь: {available}\n" \
-               f"Клиент: {customer_id}\n" \
-               f"Начало бронирования: {booking_time_start}\n" \
-               f"Конец: {booking_time_end}"
-    else:
-        msg += "\n<i>Пк не забронирован</i>"
+    msg = await spec_functions.get_pc_info(pc_id)
 
     await call.message.edit_text(
         text=msg,
-        reply_markup=admin.imarkup_pc_menu
+        reply_markup=iadmin.markup_pc_menu
     )
-    await state.set_data({"pc_id": pc_id})
     await call.answer('Пользователи (не) могут бронировать этот пк')

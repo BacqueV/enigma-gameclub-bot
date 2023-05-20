@@ -109,12 +109,12 @@ class Database:
         sql = "SELECT * FROM Users WHERE debt != 0"
         return await self.execute(sql, fetch=True)
 
-    async def select_computers(self):
-        sql = "SELECT id FROM Computers"
-        return await self.execute(sql, fetch=True)
-
     async def count_users(self):
         sql = "SELECT COUNT(*) FROM Users"
+        return await self.execute(sql, fetchval=True)
+
+    async def count_computers(self):
+        sql = "SELECT COUNT(*) FROM Computers"
         return await self.execute(sql, fetchval=True)
 
     async def update_user_username(self, username, telegram_id):
@@ -139,6 +139,9 @@ class Database:
 
     async def delete_users(self):
         await self.execute("DELETE FROM Users WHERE TRUE", execute=True)
+
+    async def delete_pc(self, pc_id):
+        await self.execute("DELETE FROM Computers WHERE id = $1", pc_id, execute=True)
 
     async def clean_pc_list(self):
         await self.execute("DELETE FROM Computers WHERE TRUE", execute=True)
