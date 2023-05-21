@@ -8,29 +8,47 @@ async def get_pc_list(page: int = 0) -> Union[str | InlineKeyboardMarkup]:
     """
     Takes an integer page value as input, returns 10, or all remaining PCs in the list as a keyboard
     """
+    i = 0
     if page < 0:
         return "Это последняя страница"
+
+    pc_list = await db.select_computers()
+    if len(pc_list) == 0:
+        return "Список пк пуст"
+
     markup_pc_list = InlineKeyboardMarkup(row_width=5)
     btn_prev = InlineKeyboardButton(text='◀️', callback_data='prev')
     btn_next = InlineKeyboardButton(text='▶️', callback_data='next')
 
-    pc_count = await db.count_computers()
-    delta = (page + 1) * 10 + 1
-
-    if pc_count == 0:
-        return "Список пк пуст"
-    else:
-        for pc in range(page * 10 + 1, delta):
-            if pc > pc_count:
-                markup_pc_list.add(btn_prev).row(iadmin.btn_back)
-                return markup_pc_list
+    if page == 0:
+        i = 1
+        for pc in pc_list[:10]:
             markup_pc_list.insert(
                 InlineKeyboardButton(
-                    text=str(pc), callback_data=str(pc)
+                    text=pc[0], callback_data=pc[0]
                 )
             )
-        markup_pc_list.add(btn_prev, btn_next).row(iadmin.btn_back)
-    return markup_pc_list
+    else:
+        page_start = int(f"{page}0")
+        page_end = int(f"{page + 1}0")
+
+        for pc in pc_list[page_start:page_end]:
+            i = 0
+            if str(pc[0]).startswith(str(page)):
+                i += 1
+                markup_pc_list.insert(
+                    InlineKeyboardButton(
+                        text=pc[0], callback_data=pc[0]
+                    )
+                )
+            else:
+                print('holy shit')
+                return "Это последняя страница"
+
+    markup_pc_list.add(btn_prev, btn_next).row(iadmin.btn_back)
+    if i > 0:
+        return markup_pc_list
+    return "Это последняя страница"
 
 
 async def get_pc_info(pc_id: int) -> str:

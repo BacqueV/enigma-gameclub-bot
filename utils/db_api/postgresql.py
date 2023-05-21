@@ -113,9 +113,9 @@ class Database:
         sql = "SELECT COUNT(*) FROM Users"
         return await self.execute(sql, fetchval=True)
 
-    async def count_computers(self):
-        sql = "SELECT COUNT(*) FROM Computers"
-        return await self.execute(sql, fetchval=True)
+    async def select_computers(self):
+        sql = "SELECT id FROM Computers ORDER BY id ASC"
+        return await self.execute(sql, fetch=True)
 
     async def update_user_username(self, username, telegram_id):
         sql = "UPDATE Users SET username=$1 WHERE telegram_id=$2"

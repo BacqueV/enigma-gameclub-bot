@@ -23,14 +23,17 @@ async def open_computers(message: types.Message):
 async def get_pc_list(message: Union[types.Message | types.CallbackQuery], state: FSMContext):
     try:
         pc_info = await spec_functions.get_pc_list()
-        await message.answer(
-            text='Переключение клавиатуры...', reply_markup=ReplyKeyboardRemove()
-        )
-        await message.answer(
-            text='Нажмите на один из списка чтобы перейти к его настройке',
-            reply_markup=pc_info
-        )
-        await state.set_data({'page': 0})
+        if not isinstance(pc_info, str):
+            await message.answer(
+                text='Переключение клавиатуры...', reply_markup=ReplyKeyboardRemove()
+            )
+            await message.answer(
+                text='Нажмите на один из списка чтобы перейти к его настройке',
+                reply_markup=pc_info
+            )
+            await state.set_data({'page': 0})
+        else:
+            await message.answer(pc_info)
     except asyncpg.exceptions.UndefinedTableError:
         await message.answer(
             'Ошибка, возможно вы еще не создали эту таблицу\n'
@@ -55,7 +58,7 @@ async def get_prev_page(call: types.CallbackQuery, state: FSMContext):
 
 
 @dp.callback_query_handler(text='next', state=AdminState.computers)
-async def get_prev_page(call: types.CallbackQuery, state: FSMContext):
+async def get_next_page(call: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     page = data['page']
 
